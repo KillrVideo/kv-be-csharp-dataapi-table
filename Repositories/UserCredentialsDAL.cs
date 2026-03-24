@@ -1,31 +1,47 @@
+using DataStax.AstraDB.DataApi.Core;
 using kv_be_csharp_dataapi_table.Models;
 
 namespace kv_be_csharp_dataapi_table.Repositories;
 
 public class UserCredentialsDAL : IUserCredentialsDAL
 {
-    private readonly Cassandra.ISession _session;
-    private readonly IMapper _mapper;
+    private readonly Database _database;
 
     public UserCredentialsDAL(ICassandraConnection cassandraConnection)
     {
-        _session = cassandraConnection.GetCQLSession();
-        _mapper = new Mapper(_session);
+        _database = cassandraConnection.GetDatabase();
     }
     
     public UserCredentials? FindByEmail(string email)
     {
-        return _mapper.Single<UserCredentials>("WHERE email=?", email);
+        var table = _database.GetTable<UserCredentials>("user_credentials");
+
+        var filterBuilder = Builders<UserCredentials>.Filter;
+        var filter = filterBuilder.Eq("email", email);
+
+        UserCredentials userCreds = table.FindOne(filter);
+        return userCreds;
     }
 
     public UserCredentials SaveUserCreds(UserCredentials user)
     {
-        _mapper.Insert(user);
+        var table = _database.GetTable<UserCredentials>("user_credentials");
+
+        table.InsertOne(user);
+
         return user;
     }
 
     public void UpdateUserCreds(UserCredentials user)
     {
-        _mapper.Update(user);
+        var table = _database.GetTable<UserCredentials>("user_credentials");
+
+        var filter = Builders<UserCredentials>.Filter.Eq("email", user.email);
+
+        var update = Builders<UserCredentials>.Update
+            .Set(u => u.accountLocked, user.accountLocked)
+            .Set(u => u.password, user.password);
+
+        table.UpdateOne(filter,update);
     }
 }

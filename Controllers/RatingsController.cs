@@ -11,12 +11,10 @@ namespace kv_be_csharp_dataapi_table.Controllers;
 [Produces("application/json")]
 public class RatingsController : Controller
 {
-    //private readonly IVideoDAL _videoDAL;
     private readonly IRatingDAL _ratingDAL;
 
     public RatingsController(IRatingDAL ratingDAL)
     {
-        //_videoDAL = videoDAL;
         _ratingDAL = ratingDAL;
     }
 
@@ -29,14 +27,22 @@ public class RatingsController : Controller
         var userId = getUserIdFromAuth(HttpContext.User);
 
         // check for existing rating
-        var existingRating = await _ratingDAL.FindByVideoIdAndUserId(videoid, userId);
+        var existingRatingByUser = await _ratingDAL.FindByVideoIdAndUserId(videoid, userId);
+        var existingRating = await _ratingDAL.FindByVideoId(videoid);
 
-        if (existingRating is not null)
+        if (existingRatingByUser is not null)
         {
+            int existingRatingScore = existingRating.ratingTotal;
+            // remove old score, add new
+            int updatedScore = existingRatingScore - existingRatingByUser.rating + ratingRequest.rating;
+
             // update existing rating
-            existingRating.rating = ratingRequest.rating;
-            existingRating.ratingDate = DateTimeOffset.Now;
-            await _ratingDAL.Update(existingRating);
+            existingRatingByUser.rating = ratingRequest.rating;
+            existingRatingByUser.ratingDate = DateTimeOffset.Now;
+            existingRating.ratingTotal = updatedScore;
+
+            _ratingDAL.UpdateRatingByUser(existingRatingByUser);
+            _ratingDAL.UpdateRating(existingRating);
         }
         else
         {
@@ -44,7 +50,14 @@ public class RatingsController : Controller
             rating.videoid = videoid;
             rating.userid = userId;
             rating.rating = ratingRequest.rating;
-            await _ratingDAL.SaveRating(rating);
+
+            RatingDB ratingDB = new RatingDB();
+            ratingDB.videoid = videoid;
+            ratingDB.ratingCounter = 1;
+            ratingDB.ratingTotal = ratingRequest.rating;
+
+            await _ratingDAL.SaveRatingByUser(rating);
+            await _ratingDAL.SaveRating(ratingDB);
         }
 
         return Ok();
@@ -55,8 +68,14 @@ public class RatingsController : Controller
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<RatingResponse>> GetVideoRating(Guid videoid)
     {
-        IEnumerable<Rating> ratings = await _ratingDAL.FindByVideoId(videoid);
-        var response = new RatingResponse(ratings);
+        var ratings = await _ratingDAL.FindByVideoId(videoid);
+        RatingResponse response = new RatingResponse();
+
+        if (ratings is not null)
+        {
+            response = new RatingResponse(ratings);
+        }
+
         return Ok(response);
     }
 
@@ -65,33 +84,20 @@ public class RatingsController : Controller
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<RatingSummaryResponse>> GetAggregateVideoRating(Guid videoid)
     {
-        IEnumerable<Rating> ratings = await _ratingDAL.FindByVideoId(videoid);
+        RatingDB? rating = await _ratingDAL.FindByVideoId(videoid);
         RatingSummary summary = new();
         summary.videoid = videoid;
 
-        if (ratings is null)
+        if (rating is null)
         {
             summary.averageRating = "0.0";
         }
         else
         {
-            int ratingSum = 0;
-            int ratingCount = 0;
-            foreach (Rating rating in ratings)
-            {
-                ratingSum += rating.rating;
-                ratingCount++;
-            }
-
-            if (ratingCount == 0)
-            {
-                summary.averageRating = "0.0";
-            }
-            else
-            {
-                summary.averageRating = (ratingSum / ratingCount).ToString("0.0");
-                summary.ratingCount = ratingCount;
-            }
+            int ratingSum = rating.ratingCounter;
+            int ratingCount = rating.ratingTotal;
+            summary.averageRating = (ratingSum / ratingCount).ToString("0.0");
+            summary.ratingCount = ratingCount;
         }
 
         return Ok(new RatingSummaryResponse(summary));

@@ -1,21 +1,25 @@
+using DataStax.AstraDB.DataApi.Core;
 using kv_be_csharp_dataapi_table.Models;
 
 namespace kv_be_csharp_dataapi_table.Repositories;
 
 public class UserDAL : IUserDAL
 {
-    private readonly Cassandra.ISession _session;
-    private readonly IMapper _mapper;
+    private readonly Database _database;
 
     public UserDAL(ICassandraConnection cassandraConnection)
     {
-        _session = cassandraConnection.GetCQLSession();
-        _mapper = new Mapper(_session);
+        _database = cassandraConnection.GetDatabase();
     }
 
     public async Task<bool> ExistsByEmail(string email)
     {
-        var user = await _mapper.FirstOrDefaultAsync<User>("WHERE email=?", email);
+        var table = _database.GetTable<User>("users");
+
+        var filterBuilder = Builders<User>.Filter;
+        var filter = filterBuilder.Eq("email", email);
+
+        var user = await table.FindOneAsync(filter);
 
         if (user is null)
         {
@@ -26,24 +30,51 @@ public class UserDAL : IUserDAL
 
     public async Task<User?> FindByEmail(string email)
     {
-        var user = await _mapper.SingleAsync<User>("WHERE email=?", email);
+        var table = _database.GetTable<User>("users");
+
+        var filterBuilder = Builders<User>.Filter;
+        var filter = filterBuilder.Eq("email", email);
+
+        var user = await table.FindOneAsync(filter);
+
         return user;
     }
 
     public async Task<User?> FindByUserId(Guid userid)
     {
-        var user = await _mapper.SingleAsync<User>("WHERE userid=?", userid);
+        var table = _database.GetTable<User>("users");
+
+        var filterBuilder = Builders<User>.Filter;
+        var filter = filterBuilder.Eq("userid", userid);
+
+        var user = await table.FindOneAsync(filter);
+
         return user;
     }
 
     public User SaveUser(User user)
     {
-        _mapper.Insert(user);
+        var table = _database.GetTable<User>("users");
+
+        table.InsertOneAsync(user);
+
         return user;
     }
 
     public void UpdateUser(User user)
     {
-        _mapper.Update(user);   
+        var table = _database.GetTable<User>("users");
+
+        var filter = Builders<User>.Filter.Eq("userid", user.userid);
+
+        var update = Builders<User>.Update
+            .Set(u => u.accountStatus, user.accountStatus)
+            .Set(u => u.createdDate, user.createdDate)
+            .Set(u => u.email, user.email)
+            .Set(u => u.firstname, user.firstname)
+            .Set(u => u.lastname, user.lastname)
+            .Set(u => u.lastLoginDate, user.lastLoginDate);
+
+        table.UpdateOneAsync(filter, update);
     }
 }

@@ -1,14 +1,25 @@
+using DataStax.AstraDB.DataApi.Tables;
+
 namespace kv_be_csharp_dataapi_table.Models;
 
 public class LatestVideo
 {
-    //public string day { get; set; } = DateTimeOffset.Now.ToString("yyyy-MM-dd");
-    public LocalDate day { get; set; } = LocalDate.Parse(DateTimeOffset.Now.Date.ToString("yyyy-MM-dd"));
+    [ColumnPrimaryKey(1)]
+    [ColumnName("day")]
+    public DateOnly day { get; set; } = DateOnly.Parse(DateTimeOffset.Now.Date.ToString("yyyy-MM-dd"));
+    
+    [ColumnPrimaryKey(2)]
+    [ColumnName("added_date")]
     public DateTimeOffset addedDate { get; set; } = DateTimeOffset.Now;
+
+    [ColumnPrimaryKey(3)]
+    [ColumnName("videoid")]
     public Guid videoId { get; set; } = Guid.NewGuid();
     public string name { get; set; } = string.Empty;
+    [ColumnName("preview_image_location")]
     public string previewImageLocation { get; set; } = string.Empty;
     public Guid userId { get; set; } = Guid.NewGuid();
+    [ColumnName("content_rating")]
     public string contentRating { get; set; } = string.Empty;
     public string category { get; set; } = string.Empty;
 

@@ -1,4 +1,3 @@
-using Cassandra;
 using Newtonsoft.Json;
 using DataStax.AstraDB.DataApi.Tables;
 
@@ -12,7 +11,7 @@ public class UserComment
 
     [ColumnPrimaryKey(2)]
     [ColumnName("commentid")]
-    public TimeUuid commentid { get; set; } = TimeUuid.NewId();
+    public Cassandra.TimeUuid commentid { get; set; } = Cassandra.TimeUuid.NewId();
     public string comment { get; set; } = string.Empty;
     public Guid videoid { get; set; } = Guid.Empty;
 

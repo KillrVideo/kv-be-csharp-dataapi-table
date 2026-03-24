@@ -3,13 +3,9 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
-//using Microsoft.AspNetCore.Identity.Data;
 using kv_be_csharp_dataapi_table.Repositories;
 using kv_be_csharp_dataapi_table.Models;
-using System.Threading.Tasks;
-using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Authorization;
-using tryAGI.OpenAI;
 
 namespace kv_be_csharp_dataapi_table.Controllers;
 

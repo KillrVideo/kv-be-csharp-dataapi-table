@@ -1,12 +1,7 @@
-using System.Management;
-using System.Threading.Tasks;
-using Cassandra;
 using DataStax.AstraDB.DataApi.Core;
 using DataStax.AstraDB.DataApi.Core.Query;
-using DataStax.AstraDB.DataApi.Tables;
 
 using kv_be_csharp_dataapi_table.Models;
-using tryAGI.OpenAI;
 
 namespace kv_be_csharp_dataapi_table.Repositories;
 
@@ -19,7 +14,7 @@ public class CommentDAL : ICommentDAL
         _database = cassandraConnection.GetDatabase();
     }
 
-    public async Task DeleteComment(Guid videoid, TimeUuid commentid)
+    public async Task DeleteComment(Guid videoid, Cassandra.TimeUuid commentid)
     {
         var table = _database.GetTable<Comment>("comments");
 
@@ -33,7 +28,7 @@ public class CommentDAL : ICommentDAL
         await table.DeleteOneAsync(filter);
     }
 
-    public async Task DeleteUserComment(Guid userid, TimeUuid commentid)
+    public async Task DeleteUserComment(Guid userid, Cassandra.TimeUuid commentid)
     {
         var table = _database.GetTable<Comment>("comments_by_user");
 
@@ -47,7 +42,7 @@ public class CommentDAL : ICommentDAL
         await table.DeleteOneAsync(filter);
     }
 
-    public async Task<Comment?> GetCommentById(TimeUuid commentid)
+    public async Task<Comment?> GetCommentById(Cassandra.TimeUuid commentid)
     {
         var table = _database.GetTable<Comment>("comments");
 
@@ -99,7 +94,7 @@ public class CommentDAL : ICommentDAL
 
         var filter = Builders<Comment>.Filter.CompositeKey(
             new PrimaryKeyFilter<Comment, Guid>(c => c.videoid, comment.videoid),
-            new PrimaryKeyFilter<Comment, TimeUuid>(c => c.commentid, comment.commentid)
+            new PrimaryKeyFilter<Comment, Cassandra.TimeUuid>(c => c.commentid, comment.commentid)
         );
 
         var update = Builders<Comment>.Update
@@ -126,7 +121,7 @@ public class CommentDAL : ICommentDAL
 
         var filter = Builders<UserComment>.Filter.CompositeKey(
             new PrimaryKeyFilter<UserComment, Guid>(c => c.userid, comment.userid),
-            new PrimaryKeyFilter<UserComment, TimeUuid>(c => c.commentid, comment.commentid)
+            new PrimaryKeyFilter<UserComment, Cassandra.TimeUuid>(c => c.commentid, comment.commentid)
         );
 
         var update = Builders<UserComment>.Update

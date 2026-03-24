@@ -4,8 +4,8 @@ namespace kv_be_csharp_dataapi_table.Repositories;
 
 public interface ILatestVideosDAL
 {
-    LatestVideo SaveLatestVideo(LatestVideo video);
+    Task<LatestVideo> SaveLatestVideo(LatestVideo video);
 
-    Task<IEnumerable<LatestVideo>> GetLatestVideosToday(LocalDate day, int limit);
+    Task<IEnumerable<LatestVideo>> GetLatestVideosToday(DateOnly day, int limit);
     Task<IEnumerable<LatestVideo>> GetLatestVideos(int limit);
 }

@@ -1,38 +1,43 @@
+using System.Threading.Tasks;
+using DataStax.AstraDB.DataApi.Core;
 using kv_be_csharp_dataapi_table.Models;
 
 namespace kv_be_csharp_dataapi_table.Repositories;
 
 public class LatestVideosDAL : ILatestVideosDAL
 {
-    private readonly Cassandra.ISession _session;
-    private readonly IMapper _mapper;
+    private readonly Database _database;
 
     public LatestVideosDAL(ICassandraConnection cassandraConnection)
     {
-        _session = cassandraConnection.GetCQLSession();
-        _mapper = new Mapper(_session);
+        _database = cassandraConnection.GetDatabase();
     }
 
-    public LatestVideo SaveLatestVideo(LatestVideo video)
+    public async Task<LatestVideo> SaveLatestVideo(LatestVideo video)
     {
-        _mapper.Insert(video);
+        var table = _database.GetTable<LatestVideo>("latest_videos");
+        await table.InsertOneAsync(video);
 
         return video;
     }
 
-    public async Task<IEnumerable<LatestVideo>> GetLatestVideosToday(LocalDate day, int limit)
+    public async Task<IEnumerable<LatestVideo>> GetLatestVideosToday(DateOnly day, int limit)
     {
-        var latestVideosData =
-            await _mapper.FetchAsync<LatestVideo>("WHERE day=? LIMIT ?", day, limit);
+        var table = _database.GetTable<LatestVideo>("latest_videos");
+
+        var filterBuilder = Builders<LatestVideo>.Filter;
+        var filter = filterBuilder.Eq("day", day);
+
+        var latestVideosData = table.Find(filter).Limit(limit);
 
         return latestVideosData;
     }
 
-    // SELECTs FROM latest_videos LIMIT limit; try not to use
     public async Task<IEnumerable<LatestVideo>> GetLatestVideos(int limit)
     {
-        var latestVideosData =
-            await _mapper.FetchAsync<LatestVideo>("LIMIT ?", limit);
+        var table = _database.GetTable<LatestVideo>("latest_videos");
+
+        var latestVideosData = table.Find().Limit(limit);
 
         return latestVideosData;
     }

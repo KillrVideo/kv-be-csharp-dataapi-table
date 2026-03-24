@@ -8,6 +8,8 @@ using Newtonsoft.Json;
 using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
+using System.Threading.Tasks;
+using System.Diagnostics;
 
 namespace kv_be_csharp_dataapi_table.Controllers;
 
@@ -98,7 +100,6 @@ public class VideosController : Controller
             }
 
             // generate remaining properties
-            //video.processingStatus = "PENDING";
             video.videoId = Guid.NewGuid();
             video.userId = userId;
 
@@ -117,12 +118,11 @@ public class VideosController : Controller
             string jsonResponse = await hFResponse.Content.ReadAsStringAsync();
             HuggingFaceResponse hFResp = JsonConvert.DeserializeObject<HuggingFaceResponse>(jsonResponse);
 
-            //float[] videoVector = embeddingModel.embed(videoText).content().vector();
-            video.contentFeatures = (CqlVector<float>)hFResp.embedding;
+            video.contentFeatures = hFResp.embedding;
 
             // save video to two tables in database
             Video savedVideo = _videoDAL.SaveVideo(video);
-            LatestVideo latestVideo = _latestVideosDAL.SaveLatestVideo(LatestVideo.fromVideo(video));
+            LatestVideo latestVideo = await _latestVideosDAL.SaveLatestVideo(LatestVideo.fromVideo(video));
             
             VideoResponse response = VideoResponse.fromVideo(savedVideo);
             response.processingStatus = "PENDING";
@@ -217,10 +217,8 @@ public class VideosController : Controller
             return NotFound($"Video with ID " + id + " not found.");
         }
 
-        int views = video.views + 1;
-        video.views = views;
-
-        _videoDAL.UpdateVideo(video);
+        video.views = video.views + 1;
+        RegisterVideoView(video);
 
         return VideoResponse.fromVideo(video);
     }
@@ -235,10 +233,9 @@ public class VideosController : Controller
             pageSize = 10;
         }
 
-        LocalDate today = LocalDate.Parse(DateTimeOffset.Now.Date.ToString("yyyy-MM-dd"));
+        DateOnly today = DateOnly.Parse(DateTimeOffset.Now.Date.ToString("yyyy-MM-dd"));
 
         var latestVideos = await _latestVideosDAL.GetLatestVideosToday(today, pageSize);
-        //latestVideos.TryGetNonEnumeratedCount(out int count);
         var latestVideosList = latestVideos.ToList();
         int count = latestVideosList.Count;
 
@@ -263,17 +260,12 @@ public class VideosController : Controller
             videoResponse.views = videoData.views;
 
             // Get all ratings for the video
-            var ratings = await _ratingDAL.FindByVideoId(video.videoId);
+            var rating = await _ratingDAL.FindByVideoId(video.videoId);
 
-            if (ratings is not null)
+            if (rating is not null)
             {
-                int ratingCount = 0;
-                int totalRating = 0;
-                foreach (var rating in ratings)
-                {
-                    totalRating += rating.rating;
-                    ratingCount++;
-                }
+                int ratingCount = rating.ratingCounter;
+                int totalRating = rating.ratingTotal;
 
                 if (ratingCount > 0)
                 {
@@ -300,7 +292,6 @@ public class VideosController : Controller
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<List<VideoResponse>>> GetSimilarVideos(string id, int requestedLimit)
     {
-        // if requestedLimit is an invalid number, default it to 5
         int limit = requestedLimit <= 0 || requestedLimit > 20 ? 5 : requestedLimit;
         Guid videoid = Guid.Parse(id);
 
@@ -316,25 +307,32 @@ public class VideosController : Controller
             return NotFound($"Video with ID " + id + " does not have a valid vector for content_features.");
         }
 
-        var similarVideos = await _videoDAL.GetByVector(originalVideo.contentFeatures, limit + 1);
+        var similarVideos = await _videoDAL.GetByVector(originalVideo.contentFeatures, (limit + 1) *2);
         List<VideoResponse> response = new();
+        List<string> uniqueVideos = [originalVideo.name];
 
         foreach (Video video in similarVideos)
         {
-            if (!video.videoId.Equals(videoid))
+            if (uniqueVideos.Count() >= limit)
             {
-                // Get views for the video
-                var videoData = await _videoDAL.GetVideoByVideoId(video.videoId);
+                break;
+            }
 
-                // Get all ratings for the video
-                var ratings = await _ratingDAL.FindByVideoId(video.videoId);
+            if (!video.videoId.Equals(videoid) && !uniqueVideos.Contains(video.name))
+            {
+                // Get data for the video
+                var videoData = await _videoDAL.GetVideoByVideoId(video.videoId);
 
                 int ratingCount = 0;
                 int totalRating = 0;
-                
-                foreach (var rating in ratings) {
-                    ratingCount++;
-                    totalRating += rating.rating;
+
+                // Get all ratings for the video
+                var rating = await _ratingDAL.FindByVideoId(video.videoId);
+
+                if (rating != null)
+                {
+                    ratingCount = rating.ratingCounter;
+                    totalRating = rating.ratingTotal;
                 }
 
                 VideoResponse videoResponse = VideoResponse.fromVideo(video);
@@ -350,6 +348,7 @@ public class VideosController : Controller
                     videoResponse.averageRating = 0.0f;
                 }
 
+                uniqueVideos.Add(video.name);
                 response.Add(videoResponse);
             }
         }
@@ -437,7 +436,7 @@ public class VideosController : Controller
 
     [HttpDelete("comment/{commentid}")]
     [Authorize]
-    public async Task<IActionResult> DeleteComment(TimeUuid commentid)
+    public async Task<IActionResult> DeleteComment(Cassandra.TimeUuid commentid)
     {
         // make sure that the comment exists
         var comment = await _commentDAL.GetCommentById(commentid);
@@ -452,6 +451,37 @@ public class VideosController : Controller
         }
 
         return BadRequest("Comment does not exist.");
+    }
+
+    private async void RegisterVideoView(Video video)
+    {
+        // videos
+        await _videoDAL.UpdateVideoView(video);
+        
+        // video_playback_stats
+        //VideoPlaybackStats? videoPlaybackStats = await _videoDAL.GetVideoPlaybackStatsByVideoId(video.videoId);
+        //
+        //if (videoPlaybackStats == null)
+        //{
+        //    videoPlaybackStats = new VideoPlaybackStats();
+        //    videoPlaybackStats.views = 1;
+        //    videoPlaybackStats.completeViews = 1;
+        //    videoPlaybackStats.uniqueViewers = 1;
+        //}
+        //else
+        //{
+        //    videoPlaybackStats.views += 1;
+        //    videoPlaybackStats.completeViews += 1;
+        //    videoPlaybackStats.uniqueViewers += 1;
+        //}
+        //
+        //_videoDAL.UpdateVideoPlaybackStats(videoPlaybackStats);
+        
+        // video_activity
+        //VideoActivity videoActivity = new VideoActivity();
+        //videoActivity.videoid = video.videoId;
+        //
+        //await _videoDAL.InsertVideoActivity(videoActivity);
     }
 
     private Guid getUserIdFromAuth(ClaimsPrincipal user)

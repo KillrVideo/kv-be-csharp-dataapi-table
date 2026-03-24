@@ -5,9 +5,19 @@ public interface IVideoDAL
 {
     Task<Video?> GetVideoByVideoId(Guid videoId);
 
+    Task<VideoPlaybackStats?> GetVideoPlaybackStatsByVideoId(Guid videoId);
+
+    Task<IEnumerable<VideoActivity>> GetVideoActivity(DateOnly day);
+
     Video SaveVideo(Video video);
 
-    void UpdateVideo(Video video);
+    Task UpdateVideo(Video video);
 
-    Task<IEnumerable<Video>> GetByVector(CqlVector<float> vector, int limit);
+    Task UpdateVideoView(Video video);
+
+    Task UpdateVideoPlaybackStats(VideoPlaybackStats video);
+
+    Task InsertVideoActivity(VideoActivity video);
+
+    Task<IEnumerable<Video>> GetByVector(float[]? vector, int limit);
 }
