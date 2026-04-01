@@ -1,8 +1,8 @@
-# KillrVideo v2 - Dotnet C-Sharp Boot Backend
+# KillrVideo v2 - Dotnet C-Sharp Table API Backend
 
 Date: March 2026
 
-A reference backend for the KillrVideo sample application rebuilt for 2025 using **Dotnet**, **C-Sharp** and **DataStax Astra DB**. This particular backend uses the Data/Table API to access existing CQL tables.
+A reference backend for the KillrVideo sample application rebuilt for 2026 using **Dotnet**, **C-Sharp** and **DataStax Astra DB**. This backend uses the Data API (Tables) to access existing CQL tables.
 
 ---
 
@@ -17,7 +17,7 @@ This repo demonstrates modern API best-practices with:
 ---
 
 ## Prerequisites
-1. **Dotnet 9+** runtime
+1. **.NET 8.0** or later
 2. A **DataStax Astra DB** serverless database – [grab a free account](https://astra.datastax.com).
 
 ## Setup & Configuration
@@ -26,9 +26,12 @@ This repo demonstrates modern API best-practices with:
 git clone git@github.com:KillrVideo/kv-be-csharp-dataapi-table.git
 cd kv-be-csharp-dataapi-table
 
-# build and install deps
+# build and install dependencies
+dotnet add package DataStax.AstraDB.DataApi --version 2.1.0-beta
 dotnet build
 ```
+
+_Note: You can also install the Data API C# client using NuGet._
 
 Database schema:
 1. Create a new keyspace named `killrvideo`.
