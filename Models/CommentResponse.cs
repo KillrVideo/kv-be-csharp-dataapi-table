@@ -3,7 +3,7 @@ namespace kv_be_csharp_dataapi_table.Models;
 public class CommentResponse
 {
     public Guid videoid { get; set; } = Guid.Empty;
-    public Cassandra.TimeUuid commentid { get; set; } = Cassandra.TimeUuid.NewId();
+    public Guid commentid { get; set; } = Guid.Empty;
     public string comment { get; set; } = string.Empty;
     public Guid userid { get; set; } = Guid.Empty;
     public float sentiment_score { get; set; } = 0.0F;
@@ -17,7 +17,7 @@ public class CommentResponse
         response.comment = comment.comment;
         response.commentid = comment.commentid;
         response.userid = comment.userid;
-        response.timestamp = comment.commentid.GetDate();
+        response.timestamp = comment.GetDate(comment.commentid);
 
         string strUserid = comment.userid.ToString();
         int firstDash = strUserid.IndexOf('-');

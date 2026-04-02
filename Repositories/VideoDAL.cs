@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using DataStax.AstraDB.DataApi.Core;
 using kv_be_csharp_dataapi_table.Models;
 
@@ -12,13 +13,11 @@ public class VideoDAL : IVideoDAL
         _database = cassandraConnection.GetDatabase();
     }
 
-    public Video SaveVideo(Video video)
+    public async Task SaveVideo(Video video)
     {
         var table = _database.GetTable<Video>("videos");
         
-        table.InsertOneAsync(video);
-
-        return video;
+        await table.InsertOneAsync(video);
     }
     
     public async Task UpdateVideo(Video video)

@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using DataStax.AstraDB.DataApi.Core;
 using DataStax.AstraDB.DataApi.Core.Query;
 
@@ -79,11 +80,11 @@ public class CommentDAL : ICommentDAL
         return comments;
     }
 
-    public Comment SaveComment(Comment comment)
+    public async Task<Comment> SaveComment(Comment comment)
     {
         var table = _database.GetTable<Comment>("comments");
 
-        table.InsertOneAsync(comment);
+        await table.InsertOneAsync(comment);
 
         return comment;
     }
@@ -106,11 +107,11 @@ public class CommentDAL : ICommentDAL
         return comment;
     }
 
-    public UserComment SaveUserComment(UserComment comment)
+    public async Task<UserComment> SaveUserComment(UserComment comment)
     {
         var table = _database.GetTable<UserComment>("comments_by_user");
 
-        table.InsertOneAsync(comment);
+        await table.InsertOneAsync(comment);
 
         return comment;
     }

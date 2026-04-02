@@ -119,13 +119,13 @@ public class VideosController : Controller
             video.contentFeatures = hFResp.embedding;
 
             // save video to two tables in database
-            Video savedVideo = _videoDAL.SaveVideo(video);
+            await _videoDAL.SaveVideo(video);
             LatestVideo latestVideo = await _latestVideosDAL.SaveLatestVideo(LatestVideo.fromVideo(video));
             
-            VideoResponse response = VideoResponse.fromVideo(savedVideo);
+            VideoResponse response = VideoResponse.fromVideo(video);
             response.processingStatus = "PENDING";
             
-            Console.WriteLine("Video submitted successfully. ID: " + savedVideo.videoId);
+            Console.WriteLine("Video submitted successfully. ID: " + video.videoId);
             return response;
 
         } catch (Exception e) {
@@ -367,8 +367,8 @@ public class VideosController : Controller
         comment.comment = req.text;
         comment.userid = userId;
 
-        _commentDAL.SaveComment(comment);
-        _commentDAL.SaveUserComment(UserComment.fromComment(comment));
+        await _commentDAL.SaveComment(comment);
+        await _commentDAL.SaveUserComment(UserComment.fromComment(comment));
 
         return CommentResponse.fromComment(comment);
     }
@@ -449,6 +449,12 @@ public class VideosController : Controller
         }
 
         return BadRequest("Comment does not exist.");
+    }
+    
+    [HttpGet("timeuuid")]
+    public IActionResult GenTimeUUID()
+    {
+        return Ok(Comment.GenerateTimeBasedGuid(DateTimeOffset.UtcNow));
     }
 
     private async void RegisterVideoView(Video video)

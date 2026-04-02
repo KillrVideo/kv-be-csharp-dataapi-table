@@ -9,7 +9,7 @@ public interface IVideoDAL
 
     Task<IEnumerable<VideoActivity>> GetVideoActivity(DateOnly day);
 
-    Video SaveVideo(Video video);
+    Task SaveVideo(Video video);
 
     Task UpdateVideo(Video video);
 
