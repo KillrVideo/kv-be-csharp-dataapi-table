@@ -17,7 +17,7 @@ This repo demonstrates modern API best-practices with:
 ---
 
 ## Prerequisites
-1. **.NET 8.0** or later
+1. **.NET 8.0** or later.
 2. A **DataStax Astra DB** serverless database – [grab a free account](https://astra.datastax.com).
 
 ## Setup & Configuration
@@ -51,7 +51,7 @@ Edit `appsettings.json`:
 Command line
  - Trust the ASP.NET Core HTTPS dev certificate. [documentation](https://learn.microsoft.com/en-us/aspnet/core/security/enforcing-ssl?view=aspnetcore-9.0&tabs=visual-studio%2Clinux-sles#trust-the-aspnet-core-https-development-certificate)
 ```bash
-dotnet dev-certs https trust
+dotnet dev-certs https --trust
 ```
 _Note: If you have trouble with the certificate in your browser or via `curl`, try "cleaning" the Dotnet certificate store, and "trust" again. `dotnet dev-certs https clean`_
 
